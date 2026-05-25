@@ -1,6 +1,13 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, generics
+from django.contrib.auth.models import User
 from main.models import Genre, Movie, MovieRating
-from .serializers import GenreSerializer, MovieSerializer, MovieRatingSerializer
+from .serializers import GenreSerializer, MovieSerializer, MovieRatingSerializer, RegisterSerializer
+
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
 
 
 class GenreViewSet(viewsets.ReadOnlyModelViewSet):
