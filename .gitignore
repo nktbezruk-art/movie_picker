@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Secrets & environment
+.env
+
+# Django
+db.sqlite3
+media/
+products/
+django.log
+security.log
+debug.log
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config
+.pylintrc
+.flake8

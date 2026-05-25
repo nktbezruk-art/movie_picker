@@ -1,0 +1,36 @@
+services:
+  # настройки приложения
+  web:
+    build: .
+    image: movie_picker:latest
+    # для того чтоб изменения в коде автоматически попадали в контейнер, на prod надо убрать
+    volumes:
+      - .:/movie_picker_app
+    # указатель какой порт к какому обращается в формате порт_локалхоста:порт_контейнера
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    # запустить web только после запуска контейнера db
+    depends_on:
+      - db
+
+  # База данных PostgreSQL
+  db:
+    image: postgres:15
+    # для хранения данных вне контейнера
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # указатель как называются конфигурационные переменные в .env
+    # либо можно переименовать их в формат POSTGRES_VARIABLE
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    env_file:
+      - .env
+
+# "Регистрация" тома из db 
+volumes:
+  postgres_data:
