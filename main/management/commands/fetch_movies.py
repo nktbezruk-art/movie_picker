@@ -65,6 +65,13 @@ class Command(BaseCommand):
     API_KEY = settings.OMDB_API_KEY
 
     def handle(self, *args, **options):
+        """
+        Команда заполнения базы данных фильмами и жанрами.
+        Список названий фильмов указан в атрибуте Command.MOVIES.
+        Заполнение происходит запросом к API OMDB.
+        После выполнения команды в консоли выводится количество добавленных фильмов и жанров.
+        """
+        
         for title, year in Command.MOVIES:
             response = requests.get(f'http://www.omdbapi.com/?t={title}&y={year}&apikey={Command.API_KEY}')
             movie_data = response.json()

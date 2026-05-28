@@ -1,11 +1,14 @@
-import requests
-from django.conf import settings
+# import requests
+# from django.conf import settings
 from rest_framework import viewsets, permissions, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth.models import User
+from deep_translator import GoogleTranslator
 from main.models import Genre, Movie, MovieRating
 from .serializers import GenreSerializer, MovieSerializer, MovieRatingSerializer, RegisterSerializer
+import logging
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -27,6 +30,12 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=False, methods=['get', ], permission_classes=[permissions.IsAuthenticated])
     def recommended(self, request):
+        """
+        Простая система рекоммендаций.
+        Возвращает 10 рекомендованных фильмов.
+        Любимые жанры определяются из высоких оценок (≥7).
+        Исключает уже оценённые пользователем фильмы.
+        """
         user = self.request.user
         high_ratings = MovieRating.objects.filter(user=user, rating__gte=7)
         rated_movies_ids = MovieRating.objects.filter(user=user).values_list('movie_id', flat=True)
@@ -35,6 +44,48 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(recommended_films, many=True)
         return Response(serializer.data)
     
+    
+    @action(detail=False, methods=['post', ], permission_classes=[permissions.IsAuthenticated])
+    def smart_recommend(self, request):
+        """
+        Умная система рекомендаций.
+        Обрабатывает запрос пользователя переводит его на английский язык,
+        ищет в нем название фильмов и жанры.
+        Возвращает топ 10 фильмов, основываясь на полученных данных.
+        """
+        request_text = request.data.get('query', '')
+        if not request_text:
+            return Response({'error': 'No query provided'}, status=400)
+        found_movies, found_genres = set(), set()
+        try:
+            translated_request = GoogleTranslator(source='ru', target='en').translate(request_text)
+        except Exception:
+            translated_request = request_text
+        for movie in Movie.objects.all():
+            if movie.title.lower() in translated_request.lower():
+                found_movies.add(movie)
+        
+        for genre in Genre.objects.all():
+            if genre.name.lower() in translated_request.lower():
+                found_genres.add(genre)
+            
+        final_movie_set = found_movies
+
+        if not found_genres:
+            serializer = self.get_serializer(final_movie_set, many=True)
+            return Response(serializer.data)
+            
+        for genre in found_genres:
+            genre_movies = list(Movie.objects.filter(genres=genre))[:10]
+            final_movie_set.update(genre_movies)
+            
+        serializer = self.get_serializer(
+            sorted(final_movie_set, key=lambda m: m.rating or 0, reverse=True)[:10], many=True)
+        return Response(serializer.data)
+                
+        
+    # HuggingFace API недоступен, реалиуется позже
+
     # @action(detail=False, methods=['post', ], permission_classes=[permissions.IsAuthenticated])
     # def ai_recommended(self, request):
     #     API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
@@ -67,6 +118,7 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
 #         response = requests.post(API_URL, headers=headers, json=payload)
 #         data = response.json()
 #         return Response(data)
+    
         
         
 
