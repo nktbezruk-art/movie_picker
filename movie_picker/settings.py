@@ -101,6 +101,7 @@ DATABASES = {
 }
 
 OMDB_API_KEY = os.environ['OMDB_API_KEY']
+HF_API_TOKEN = os.getenv('HF_API_TOKEN')
 
 
 # Password validation

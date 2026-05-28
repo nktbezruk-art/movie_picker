@@ -32,4 +32,3 @@ class MovieRatingSerializer(serializers.ModelSerializer):
         model = MovieRating
         fields = '__all__'
         read_only_fields = ['user', 'created_at']
-        depth = 1
