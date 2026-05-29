@@ -41,6 +41,8 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
         rated_movies_ids = MovieRating.objects.filter(user=user).values_list('movie_id', flat=True)
         favourite_genres = Genre.objects.filter(movies__movierating__in=high_ratings)
         recommended_films = Movie.objects.filter(genres__in=favourite_genres).exclude(id__in=rated_movies_ids).distinct().order_by('-rating')[:10]
+        if not recommended_films:
+            recommended_films = Movie.objects.exclude(id__in=rated_movies_ids).order_by('-rating')[:10]
         serializer = self.get_serializer(recommended_films, many=True)
         return Response(serializer.data)
     
