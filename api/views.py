@@ -40,7 +40,7 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
         high_ratings = MovieRating.objects.filter(user=user, rating__gte=7)
         rated_movies_ids = MovieRating.objects.filter(user=user).values_list('movie_id', flat=True)
         favourite_genres = Genre.objects.filter(movies__movierating__in=high_ratings)
-        recommended_films = Movie.objects.filter(genres__in=favourite_genres).exclude(id__in=rated_movies_ids).order_by('-rating')[:10]
+        recommended_films = Movie.objects.filter(genres__in=favourite_genres).exclude(id__in=rated_movies_ids).distinct().order_by('-rating')[:10]
         serializer = self.get_serializer(recommended_films, many=True)
         return Response(serializer.data)
     
@@ -52,7 +52,10 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
         Обрабатывает запрос пользователя переводит его на английский язык,
         ищет в нем название фильмов и жанры.
         Возвращает топ 10 фильмов, основываясь на полученных данных.
+        Если не найдено ни одного фильма, возвращает топ 10 фильмов по рейтингу.
         """
+        user = self.request.user
+        rated_movies_ids = MovieRating.objects.filter(user=user).values_list('movie_id', flat=True)
         request_text = request.data.get('query', '')
         if not request_text:
             return Response({'error': 'No query provided'}, status=400)
@@ -61,6 +64,7 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
             translated_request = GoogleTranslator(source='ru', target='en').translate(request_text)
         except Exception:
             translated_request = request_text
+
         for movie in Movie.objects.all():
             if movie.title.lower() in translated_request.lower():
                 found_movies.add(movie)
@@ -71,14 +75,21 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
             
         final_movie_set = found_movies
 
-        if not found_genres:
-            serializer = self.get_serializer(final_movie_set, many=True)
-            return Response(serializer.data)
             
         for genre in found_genres:
-            genre_movies = list(Movie.objects.filter(genres=genre))[:10]
+            genre_movies = list(Movie.objects.filter(genres=genre))
             final_movie_set.update(genre_movies)
-            
+        
+        
+        # Если из запроса не будет найдено фильмов, вернется топ фильмов по рейтингу.
+        # Срез не делается потому что может быть, что если срез возьмется сейчас, то будут только просмотренные фильмы,
+        # которые отсеятся дальше, и будет возвращен пустой список.
+        if not final_movie_set:
+            final_movie_set = set(Movie.objects.order_by('-rating'))
+        
+        # Для того чтобы убрать уже оцененные фильмы
+        final_movie_set = {m for m in final_movie_set if m.pk not in rated_movies_ids}
+
         serializer = self.get_serializer(
             sorted(final_movie_set, key=lambda m: m.rating or 0, reverse=True)[:10], many=True)
         return Response(serializer.data)
