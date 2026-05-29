@@ -21,5 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# 0.0.0.0:8000 чтоб слушал весь порт 8000
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# скрипт для автоматического наполнения БД при первом запуске
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
