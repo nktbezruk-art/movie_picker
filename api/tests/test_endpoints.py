@@ -1,5 +1,6 @@
 import pytest
 from typing import cast
+from django.db import IntegrityError
 from rest_framework.response import Response
 
 
@@ -75,6 +76,7 @@ def test_post_movie_rating(api_client, user, movie):
 
     api_client.force_authenticate(user=user)
 
+    # проверка невалидности
     response = cast(Response, api_client.post(
         '/api/movie_ratings/',
         {"rating": -1, "movie": movie.id})
@@ -86,6 +88,10 @@ def test_post_movie_rating(api_client, user, movie):
         {"rating": 10, "movie": movie.id})
                     )
     assert response.status_code == 201
+    
+    # проверка уникальности
+    with pytest.raises(IntegrityError):
+        api_client.post('/api/movie_ratings/', {'rating': 10, 'movie': movie.id})
 
 
 @pytest.mark.django_db

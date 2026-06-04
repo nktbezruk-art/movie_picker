@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -142,3 +143,22 @@ STATIC_URL = 'static/'
 
 # pytest
 TEST_RUNNER = 'pytest_django.runner.PytestTestRunner'
+
+# celery
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+# Celery Beat
+CELERY_BEAT_SCHEDULE = {
+    'update-ratings-weekly': {
+        'task': 'main.tasks.update_ratings',
+        'schedule': crontab(hour=3, day_of_week=1),  # понедельник, 3:00
+    },
+    'fetch-new-movies-monthly': {
+        'task': 'main.tasks.fetch_new_movies',
+        'schedule': crontab(hour=4, day_of_month=1),  # 1 числа, 4:00
+    },
+}

@@ -35,6 +35,39 @@ services:
     env_file:
       - .env
 
+  
+  redis:
+    image: redis:7-alpine
+  
+    ports:
+      - 6379:6379
+
+
+  celery:
+    build: .
+    image: movie_picker:latest
+    command: celery -A movie_picker.celery_app worker -l info
+    volumes:
+      - .:/movie_picker_app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+
+  celery-beat:
+    build: .
+    image: movie_picker:latest
+    command: celery -A movie_picker.celery_app beat -l info
+    volumes:
+    - .:/movie_picker_app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+
+
 # "Регистрация" тома из db 
 volumes:
   postgres_data:
